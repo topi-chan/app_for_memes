@@ -1,4 +1,4 @@
-#How to run:
+# How to run:
 1. clone repo
 2. create env file: .env: $ cp .env-template .env
 3. in main folder: $ docker compose build
