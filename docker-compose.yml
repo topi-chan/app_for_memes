@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+    meme-web:
+        container_name: meme-web
+        build: .
+        depends_on:
+            -   meme-db
+        ports:
+            -   '5500:5000'
+        volumes:
+            -   ./:/app/
+        command: ['dockerize', '-timeout', '120s', '-wait', 'tcp://meme-db:5432', 'python', '-m', 'uvicorn',
+                  'hr_one_app.main:app', '--host', '0.0.0.0', '--port', '5000', '--reload']
+        environment:
+            DATABASE_URL: 'postgres://meme:meme321@meme-db:5432/meme_db'
+
+
+    meme-db:
+        container_name: meme-db
+        image: postgres:14-alpine3.16
+        restart: always
+        environment:
+                POSTGRES_USER: meme
+                POSTGRES_PASSWORD: meme321
+                POSTGRES_DB: meme_db
+        ports:
+            -   '5446:5432'
+        volumes:
+            -   ./meme_data:/var/lib/postgresql/data
