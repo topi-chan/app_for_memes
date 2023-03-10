@@ -28,7 +28,7 @@ def get_memes(session: Session = Depends(get_session)):
 
 @router.get("/mem/{number}", response_model=list, status_code=200)
 def get_sub_memes_by_date_add(number: int, session: Session = Depends(get_session)):
-    """Zwróc listy zaakceptowanych memów wg zadanej wielkości listy, posegregowane wg date_mod"""
+    """Return lists of accepted memes by set count, sorted by modification date"""
     memes = MemesService.get_memes_by_date(session=session)
     try:
         sublist = split_memes(memes, 20)[number]
@@ -39,7 +39,7 @@ def get_sub_memes_by_date_add(number: int, session: Session = Depends(get_sessio
 
 @router.get("/mem_like/{number}", response_model=list, status_code=200)
 def get_sub_memes_by_like(number: int, session: Session = Depends(get_session)):
-    """Zwróc listy zaakceptowanych memów wg zadanej wielkości listy, posegregowane wg like"""
+    """Return lists of accepted memes by set count, sorted by like count"""
     memes = MemesService.get_memes_by_like(session=session)
     try:
         sublist = split_memes(memes, 20)[number]
@@ -50,7 +50,7 @@ def get_sub_memes_by_like(number: int, session: Session = Depends(get_session)):
 
 @router.get("/best/{number}", response_model=list, status_code=200)
 def get_best_sub_memes(number: int, session: Session = Depends(get_session)):
-    """Zwróc listy najlepszych, zaakceptowanych memów wg zadanej wielkości listy, posegregowane wg daty"""
+    """Return lists of best, accepted memes by set count, sorted by date"""
     memes = MemesService.get_best_memes(session=session)
     try:
         sublist = split_memes(memes, 20)[number]
@@ -61,26 +61,15 @@ def get_best_sub_memes(number: int, session: Session = Depends(get_session)):
 
 @router.get("/accepted_memes", response_model=list[MemeSchema], status_code=200)
 def get_accepted_memes(session: Session = Depends(get_session)):
-    """Zwróc listę wszystkich zaakceptowanych memów bez sortowania"""
+    """Return all memes without sorting"""
     accepted_memes = MemesService.get_accepted_memes(session=session)
     return accepted_memes
 
 
-@router.post("/", response_model=MemeSchema, status_code=200)
-def post_meme(body: MemeCreate, session: Session = Depends(get_session)):
-    """Utwórz obiekt mema w bazie - do poprawy / uzupełnienia"""
-    meme = MemesService.create_meme(
-        name=body.name,
-        like=body.like,
-        status_id=body.status_id,
-        session=session,
-    )
-    return meme
-
 
 @router.get("/{id}", response_model=MemeSchema, status_code=200)
 def get_meme(id: str, session: Session = Depends(get_session)):
-    """Zwróc mema jako obiekt z bazy, bez pliku binarnego"""
+    """Return meme as a database object, without binary representation"""
     meme = MemesService.get_meme(meme_id=id, session=session)
     if not meme:
         raise HTTPException(status_code=404, detail=f"Meme with id={id} not found!")
@@ -99,7 +88,7 @@ async def send_meme(
     file: UploadFile = File(),
     session: Session = Depends(get_session),
 ):
-    """Wyślij mema jako obiekt binarny i zapisz obiekt w bazie"""
+    """Upload meme as a binary file and database object"""
     fs = await file.read()
     uuid = uuid4()
     upload_dir = Path(f"/meme_save/{str(uuid)[0]}/{uuid}")
@@ -134,26 +123,10 @@ async def send_meme(
     return 200
 
 
-@router.get(
-    "/show_meme/{id}",
-    responses={
-        200: {
-            "content": {"image/png": {}},
-            "description": "Return the JSON item or an image.",
-        }
-    },
-)
-def get_meme(id: str, session: Session = Depends(get_session)):
-    """Do poprawy/uzupełnienia - zwróć mema jako obiekt binarny lub obiekt bazy"""
-    meme = MemesService.get_meme(meme_id=id, session=session)
-    if not meme:
-        raise HTTPException(status_code=404, detail=f"Meme with id={id} not found!")
-    return FileResponse(str(meme.name), media_type="image/png")
-
 
 @router.patch("/change_status")
 def change_status(body: MemeSchema, session: Session = Depends(get_session)):
-    """Do ewentualnego uzupełnienia - dowolna zmiana obiektu w bazie - mema"""
+    """Change any meme field in the database"""
     with session as session:
         meme = session.query(Meme_db).filter_by(id=body.id).one_or_none()
         meme.status_id = body.status_id
@@ -164,7 +137,7 @@ def change_status(body: MemeSchema, session: Session = Depends(get_session)):
 
 @router.get("/meme/{id}", status_code=200)
 def get_file(id: str, session: Session = Depends(get_session)) -> FileResponse:
-    """Zwróć mema jako obiekt binarny"""
+    """Return meme with asynchronous streaming response as a binary file"""
     meme = MemesService.get_meme(meme_id=id, session=session)
     meme_filepath = meme.name
     return FileResponse(path=meme_filepath)
@@ -172,7 +145,7 @@ def get_file(id: str, session: Session = Depends(get_session)) -> FileResponse:
 
 @router.patch("/like/{id}")
 def add_like(id: str, session: Session = Depends(get_session)):
-    """Dodaj polubienie do mema"""
+    """Add like to meme"""
     with session as session:
         meme = session.query(Meme_db).filter_by(id=id).one_or_none()
         meme.like += 1
@@ -183,7 +156,7 @@ def add_like(id: str, session: Session = Depends(get_session)):
 
 @router.delete("/delete/{id}")
 def delete_meme(id: str, session: Session = Depends(get_session)):
-    """Usuń mema jako obiekt z bazy i plik binarny z serwera wraz z katalogiem nadrzędnym"""
+    """Remove meme from database with its binary representation and parent folder"""
     with session as session:
         meme = session.query(Meme_db).filter_by(id=id).one_or_none()
         path_to_meme = Path(meme.name)
@@ -197,7 +170,7 @@ def delete_meme(id: str, session: Session = Depends(get_session)):
 
 @router.patch("/accept/{id}")
 def accept_meme(id: str, user: str, session: Session = Depends(get_session)):
-    """Zaakceptuj wybranego mema"""
+    """Appect choosen meme"""
     with session as session:
         meme = session.query(Meme_db).filter_by(id=id).one_or_none()
         meme.status_id = 2
