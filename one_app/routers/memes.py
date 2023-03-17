@@ -21,7 +21,7 @@ router = APIRouter(tags=["memes"])
 
 @router.get("/", response_model=list, status_code=200)
 def get_memes(session: Session = Depends(get_session)):
-    """Zwróc wszystkie memy"""
+    """Return all memes"""
     memes = MemesService.get_memes(session=session)
     return memes
 
